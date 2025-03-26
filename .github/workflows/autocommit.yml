@@ -1,34 +1,48 @@
 name: Auto commit
 
 on:
-
   push:
     branches:
       - master
-      
   schedule:
-  - cron: "0 7,9,11 * * 1,3" # See https://crontab.guru/#0_7,9,11_*_*_1,3
+    - cron: "0 0 * * *"  # 每天 UTC 0:00 运行
 
 jobs:
   auto_commit:
     runs-on: ubuntu-latest
     steps:
-      - name: DEBUG 
+      - name: Decide whether to commit
+        id: decide
+        run: |
+          # 生成一个随机数，决定是否提交
+          # 设置 50% 概率提交，每周平均约 3.5 次
+          if (( RANDOM % 2 )); then
+            echo "commit=true" >> $GITHUB_OUTPUT
+          else
+            echo "commit=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: DEBUG
+        if: steps.decide.outputs.commit == 'true'
         run: echo "::debug::Ref = ${{github.ref}}"
-      - uses: actions/checkout@v3      
+
+      - uses: actions/checkout@v3
+        if: steps.decide.outputs.commit == 'true'
         with:
-         persist-credentials: false
-         fetch-depth: 0
+          persist-credentials: false
+          fetch-depth: 0
 
       - name: Modify last update
+        if: steps.decide.outputs.commit == 'true'
         run: |
           d=`date '+%Y-%m-%dT%H:%M:%SZ'`
           echo $d > LAST_UPDATED
-          
+
       - name: Commit changes
+        if: steps.decide.outputs.commit == 'true'
         run: |
-          git config --local user.email "mazipanneh@gmail.com"
-          git config --local user.name "mazipan"
+          git config --local user.email "yairajef@c5.hk"
+          git config --local user.name "Seyraphim"
           git add -A
           
           arr[0]="chore(bot): 😂 auto commit"
@@ -45,8 +59,9 @@ jobs:
           rand=$[$RANDOM % ${#arr[@]}]
           
           git commit -m "${arr[$rand]}"
-          
+
       - name: GitHub Push
+        if: steps.decide.outputs.commit == 'true'
         uses: ad-m/github-push-action@v0.6.0
         with:
           directory: "."
